@@ -14,6 +14,9 @@ set(CJSON_UTILS_VERSION_SO 1)
 
 set(custom_compiler_flags)
 
+# Ensure C99/POSIX snprintf is exposed by glibc under -std=c89
+add_definitions(-D_POSIX_C_SOURCE=200112L -D_DEFAULT_SOURCE=1)
+
 include(CheckCCompilerFlag)
 option(ENABLE_CUSTOM_COMPILER_FLAGS "Enables custom compiler flags" ON)
 if (ENABLE_CUSTOM_COMPILER_FLAGS)
