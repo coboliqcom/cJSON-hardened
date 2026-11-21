@@ -25,6 +25,16 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #endif
 
+#if !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200112L
+#endif
+#if !defined(_ISOC99_SOURCE)
+#define _ISOC99_SOURCE 1
+#endif
+#if !defined(_DEFAULT_SOURCE)
+#define _DEFAULT_SOURCE 1
+#endif
+
 #ifdef __GNUCC__
 #pragma GCC visibility push(default)
 #endif
