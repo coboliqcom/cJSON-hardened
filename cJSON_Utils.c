@@ -52,6 +52,10 @@
 
 #include "cJSON_Utils.h"
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf _snprintf
+#endif
+
 /* define our own boolean type */
 #ifdef true
 #undef true
@@ -156,7 +160,7 @@ static cJSON_bool compare_pointers(const unsigned char *name, const unsigned cha
 /* calculate the length of a string if encoded as JSON pointer with ~0 and ~1 escape sequences */
 static size_t pointer_encoded_length(const unsigned char *string)
 {
-    size_t length;
+    size_t length = 0;
     for (length = 0; *string != '\0'; (void)string++, length++)
     {
         /* character needs to be escaped? */
@@ -231,7 +235,7 @@ CJSON_PUBLIC(char *) cJSONUtils_FindPointerFromObjectTo(const cJSON * const obje
                     cJSON_free(full_pointer);
                     return NULL;
                 }
-                sprintf((char*)full_pointer, "/%lu%s", (unsigned long)child_index, target_pointer); /* /<array_index><path> */
+                snprintf((char*)full_pointer, strlen((char*)target_pointer) + 20 + 2, "/%lu%s", (unsigned long)child_index, target_pointer); /* /<array_index><path> */
                 cJSON_free(target_pointer);
 
                 return (char*)full_pointer;
@@ -1119,7 +1123,7 @@ static void compose_patch(cJSON * const patches, const unsigned char * const ope
         size_t path_length = strlen((const char*)path);
         unsigned char *full_path = (unsigned char*)cJSON_malloc(path_length + suffix_length + sizeof("/"));
 
-        sprintf((char*)full_path, "%s/", (const char*)path);
+        snprintf((char*)full_path, strlen((const char*)path) + 2, "%s/", (const char*)path);
         encode_string_as_pointer(full_path + path_length + 1, suffix);
 
         cJSON_AddItemToObject(patch, "path", cJSON_CreateString((const char*)full_path));
@@ -1185,7 +1189,7 @@ static void create_patches(cJSON * const patches, const unsigned char * const pa
                     cJSON_free(new_path);
                     return;
                 }
-                sprintf((char*)new_path, "%s/%lu", path, (unsigned long)index); /* path of the current array element */
+                snprintf((char*)new_path, strlen((const char*)path) + 20 + sizeof("/"), "%s/%lu", path, (unsigned long)index); /* path of the current array element */
                 create_patches(patches, new_path, from_child, to_child, case_sensitive);
             }
 
@@ -1200,7 +1204,7 @@ static void create_patches(cJSON * const patches, const unsigned char * const pa
                     cJSON_free(new_path);
                     return;
                 }
-                sprintf((char*)new_path, "%lu", (unsigned long)index);
+                snprintf((char*)new_path, 21, "%lu", (unsigned long)index);
                 compose_patch(patches, (const unsigned char*)"remove", path, new_path, NULL);
             }
             /* add new elements in 'to' that were not in 'from' */
@@ -1224,7 +1228,7 @@ static void create_patches(cJSON * const patches, const unsigned char * const pa
             /* for all object values in the object with more of them */
             while ((from_child != NULL) || (to_child != NULL))
             {
-                int diff;
+                int diff = 0;
                 if (from_child == NULL)
                 {
                     diff = 1;
@@ -1245,7 +1249,7 @@ static void create_patches(cJSON * const patches, const unsigned char * const pa
                     size_t from_child_name_length = pointer_encoded_length((unsigned char*)from_child->string);
                     unsigned char *new_path = (unsigned char*)cJSON_malloc(path_length + from_child_name_length + sizeof("/"));
 
-                    sprintf((char*)new_path, "%s/", path);
+                    snprintf((char*)new_path, strlen((const char*)path) + 2, "%s/", path);
                     encode_string_as_pointer(new_path + path_length + 1, (unsigned char*)from_child->string);
 
                     /* create a patch for the element */
@@ -1419,7 +1423,7 @@ static cJSON *generate_merge_patch(cJSON * const from, cJSON * const to, const c
     }
     while (from_child || to_child)
     {
-        int diff;
+        int diff = 0;
         if (from_child != NULL)
         {
             if (to_child != NULL)

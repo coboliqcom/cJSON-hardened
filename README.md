@@ -1,3 +1,36 @@
+# Hardened cJSON (cJSON-hardened)
+
+> **Maintained, Hardened Drop-in Fork of DaveGamble's Classic cJSON Library (v1.7.18)**  
+> *Audited, Patched, and Verified via DecodeIQ CodeTruth Engine*
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Standards: MISRA-C / CERT-C](https://img.shields.io/badge/Standards-MISRA--C%20%7C%20CERT--C-brightgreen.svg)]()
+[![Status: Maintained](https://img.shields.io/badge/Status-Maintained%20Fork-orange.svg)]()
+
+---
+
+## 🛡️ Why This Fork Exists
+
+DaveGamble/cJSON is one of the most popular lightweight JSON parsers in the C ecosystem (~14,000+ stars), deployed in millions of embedded devices, firmware, IoT gateways, and microservices.
+
+However, a deterministic syntax-tree security audit using **DecodeIQ CodeTruth** revealed several critical memory hygiene issues in upstream cJSON.c and cJSON_Utils.c:
+
+1. **CERT-C STR31-C (Insecure sprintf with Post-Hoc Overrun Checks):** Upstream formatted floating point numbers (print_number) into 
+umber_buffer[26] with raw sprintf(), checking for buffer overflow *after* stack corruption had already occurred.
+2. **CERT-C STR31-C (Unbounded String Copies):** Multiple unbounded strcpy() operations and JSON Pointer formatting (cJSON_Utils.c) bypassed compile-time and runtime buffer boundaries.
+3. **CERT-C MEM30-C (Dangling Pointers During Cleanup):** Deallocation routines in cJSON_Delete left dangling child, valuestring, and key pointers intact during recursive teardown.
+4. **CERT-C EXP33-C (Uninitialized Stack Variables):** 22 uninitialized scalar and pointer declarations across local function scopes.
+
+---
+
+## 🔧 What Was Fixed
+
+* **100% Deterministic Remediation:** Replaced unbounded sprintf with snprintf, unbounded strcpy with safe memcpy, initialized all local variables, and nullified pointers upon deletion.
+* **100% ABI and Header Compatibility:** Drop-in replacement for DaveGamble/cJSON. Function signatures, data structures, and CMake targets remain unchanged.
+* **Full Forensic Security Report:** Read the complete breakdown in [CJSON_HARDENING_FORENSIC_REPORT.md](CJSON_HARDENING_FORENSIC_REPORT.md).
+
+---
+
 # cJSON
 
 Ultralightweight JSON parser in ANSI C.

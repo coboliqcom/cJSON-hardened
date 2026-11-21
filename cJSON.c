@@ -77,6 +77,10 @@
 #define isnan(d) (d != d)
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf _snprintf
+#endif
+
 #ifndef NAN
 #ifdef _WIN32
 #define NAN sqrt(-1.0)
@@ -124,7 +128,7 @@ CJSON_PUBLIC(double) cJSON_GetNumberValue(const cJSON * const item)
 CJSON_PUBLIC(const char*) cJSON_Version(void)
 {
     static char version[15];
-    sprintf(version, "%i.%i.%i", CJSON_VERSION_MAJOR, CJSON_VERSION_MINOR, CJSON_VERSION_PATCH);
+    snprintf(version, sizeof(version), "%i.%i.%i", CJSON_VERSION_MAJOR, CJSON_VERSION_MINOR, CJSON_VERSION_PATCH);
 
     return version;
 }
@@ -308,7 +312,7 @@ static cJSON_bool parse_number(cJSON * const item, parse_buffer * const input_bu
 {
     double number = 0;
     unsigned char *after_end = NULL;
-    unsigned char *number_c_string;
+    unsigned char *number_c_string = NULL;
     unsigned char decimal_point = get_decimal_point();
     size_t i = 0;
     size_t number_string_length = 0;
@@ -435,8 +439,8 @@ CJSON_PUBLIC(double) cJSON_SetNumberHelper(cJSON *object, double number)
 CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring)
 {
     char *copy = NULL;
-    size_t v1_len;
-    size_t v2_len;
+    size_t v1_len = 0;
+    size_t v2_len = 0;
     /* if object's type is not cJSON_String or is cJSON_IsReference, it should not set valuestring */
     if ((object == NULL) || !(object->type & cJSON_String) || (object->type & cJSON_IsReference))
     {
@@ -458,7 +462,7 @@ CJSON_PUBLIC(char*) cJSON_SetValuestring(cJSON *object, const char *valuestring)
         {
             return NULL;
         }
-        strcpy(object->valuestring, valuestring);
+        memcpy(object->valuestring, valuestring, v1_len + 1);
         return object->valuestring;
     }
     copy = (char*) cJSON_strdup((const unsigned char*)valuestring, &global_hooks);
@@ -611,22 +615,22 @@ static cJSON_bool print_number(const cJSON * const item, printbuffer * const out
     /* This checks for NaN and Infinity */
     if (isnan(d) || isinf(d))
     {
-        length = sprintf((char*)number_buffer, "null");
+        length = snprintf((char*)number_buffer, sizeof(number_buffer), "null");
     }
     else if(d == (double)item->valueint)
     {
-        length = sprintf((char*)number_buffer, "%d", item->valueint);
+        length = snprintf((char*)number_buffer, sizeof(number_buffer), "%d", item->valueint);
     }
     else
     {
         /* Try 15 decimal places of precision to avoid nonsignificant nonzero digits */
-        length = sprintf((char*)number_buffer, "%1.15g", d);
+        length = snprintf((char*)number_buffer, sizeof(number_buffer), "%1.15g", d);
 
         /* Check whether the original double can be recovered */
         if ((sscanf((char*)number_buffer, "%lg", &test) != 1) || !compare_double((double)test, d))
         {
             /* If not, print with 17 decimal places of precision */
-            length = sprintf((char*)number_buffer, "%1.17g", d);
+            length = snprintf((char*)number_buffer, sizeof(number_buffer), "%1.17g", d);
         }
     }
 
@@ -973,7 +977,7 @@ static cJSON_bool print_string_ptr(const unsigned char * const input, printbuffe
         {
             return false;
         }
-        strcpy((char*)output, "\"\"");
+        memcpy(output, "\"\"", sizeof("\"\""));
 
         return true;
     }
@@ -1060,7 +1064,7 @@ static cJSON_bool print_string_ptr(const unsigned char * const input, printbuffe
                     break;
                 default:
                     /* escape and print as unicode codepoint */
-                    sprintf((char*)output_pointer, "u%04x", *input_pointer);
+                    snprintf((char*)output_pointer, 6, "u%04x", *input_pointer);
                     output_pointer += 4;
                     break;
             }
@@ -1130,7 +1134,7 @@ static parse_buffer *skip_utf8_bom(parse_buffer * const buffer)
 
 CJSON_PUBLIC(cJSON *) cJSON_ParseWithOpts(const char *value, const char **return_parse_end, cJSON_bool require_null_terminated)
 {
-    size_t buffer_length;
+    size_t buffer_length = 0;
 
     if (NULL == value)
     {
@@ -1437,7 +1441,7 @@ static cJSON_bool print_value(const cJSON * const item, printbuffer * const outp
             {
                 return false;
             }
-            strcpy((char*)output, "null");
+            memcpy(output, "null", sizeof("null"));
             return true;
 
         case cJSON_False:
@@ -1446,7 +1450,7 @@ static cJSON_bool print_value(const cJSON * const item, printbuffer * const outp
             {
                 return false;
             }
-            strcpy((char*)output, "false");
+            memcpy(output, "false", sizeof("false"));
             return true;
 
         case cJSON_True:
@@ -1455,7 +1459,7 @@ static cJSON_bool print_value(const cJSON * const item, printbuffer * const outp
             {
                 return false;
             }
-            strcpy((char*)output, "true");
+            memcpy(output, "true", sizeof("true"));
             return true;
 
         case cJSON_Number:
@@ -1813,7 +1817,7 @@ static cJSON_bool print_object(const cJSON * const item, printbuffer * const out
     {
         if (output_buffer->format)
         {
-            size_t i;
+            size_t i = 0;
             output_pointer = ensure(output_buffer, output_buffer->depth);
             if (output_pointer == NULL)
             {
@@ -1882,7 +1886,7 @@ static cJSON_bool print_object(const cJSON * const item, printbuffer * const out
     }
     if (output_buffer->format)
     {
-        size_t i;
+        size_t i = 0;
         for (i = 0; i < (output_buffer->depth - 1); i++)
         {
             *output_pointer++ = '\t';
